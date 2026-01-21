@@ -1,0 +1,611 @@
+all_full_volume:
+  alias: Alle auf 100%
+  mode: single
+  sequence:
+  - service: media_player.volume_set
+    target:
+      entity_id:
+      - media_player.gang_og_3
+      - media_player.kucheamp_3
+      - media_player.room_teufel_garage
+      - media_player.hausture_2
+      - media_player.bad_og_klein_2
+    data:
+      volume_level: 1.0
+volume_change_5:
+  alias: Gang OG Volume Change 5%
+  mode: single
+  fields:
+    direction:
+      description: up oder down
+      example: up
+  sequence:
+  - variables:
+      player: media_player.gang_og_3
+      current: '{{ state_attr(player, ''volume_level'') | float(0) }}'
+      step: '{{ 0.05 if direction == ''up'' else -0.05 }}'
+      new: '{% set v = current + step %} {% if v > 1 %} 1 {% elif v < 0 %} 0 {% else
+        %} {{ v }} {% endif %}'
+  - service: media_player.volume_set
+    target:
+      entity_id: '{{ player }}'
+    data:
+      volume_level: '{{ new | float(0) }}'
+audio_master_5_test:
+  alias: Audio Master +5% TEST
+  mode: parallel
+  sequence:
+  - choose:
+    - conditions: '{{ is_state(''input_boolean.audio_wiim1'', ''on'') }}'
+      sequence:
+      - service: media_player.volume_up
+        target:
+          entity_id: media_player.wiim1
+audio_all_volume_up:
+  alias: Audio Alle +5%
+  mode: single
+  sequence:
+  - service: media_player.volume_up
+    target:
+      entity_id: media_player.audio_all
+audio_all_volume_down:
+  alias: Audio Alle -5%
+  mode: single
+  sequence:
+  - service: media_player.volume_down
+    target:
+      entity_id: media_player.audio_all
+wiim1_volume_up:
+  alias: WIIM1 +5%
+  mode: single
+  sequence:
+  - service: media_player.volume_up
+    target:
+      entity_id: media_player.wiim1
+wiim1_volume_down:
+  alias: WIIM1 -5%
+  mode: single
+  sequence:
+  - service: media_player.volume_down
+    target:
+      entity_id: media_player.wiim1
+szene_bayern_rot_weis_kids:
+  alias: Szene - Bayern Rot/Weiß (Kids)
+  mode: restart
+  sequence:
+  - service: light.turn_on
+    target:
+      entity_id: light.fcb_all
+    data:
+      transition: 4
+      rgb_color:
+      - 255
+      - 0
+      - 0
+      brightness_pct: 55
+  - delay: 00:00:08
+  - service: light.turn_on
+    target:
+      entity_id: light.fcb_all
+    data:
+      transition: 4
+      rgb_color:
+      - 255
+      - 255
+      - 255
+      brightness_pct: 70
+bayern_mode_sanft_rot_hauch_weis_kids:
+  alias: Bayern Mode – Sanft Rot / Hauch Weiß (Kids)
+  mode: restart
+  sequence:
+  - repeat:
+      while:
+      - condition: state
+        entity_id: input_boolean.bayern_mode
+        state: 'on'
+      sequence:
+      - service: light.turn_on
+        target:
+          entity_id:
+          - light.kuche_2_l
+          - light.hue_go_2
+          - light.perifo_cylinder_spot_1
+          - light.wohnzimmer
+          - light.flur
+        data:
+          hs_color:
+          - 0
+          - 100
+          brightness_pct: 65
+          transition: 6
+      - delay: 00:00:12
+      - service: light.turn_on
+        target:
+          entity_id:
+          - light.kuche_2_l
+          - light.hue_go_2
+          - light.perifo_cylinder_spot_1
+          - light.wohnzimmer
+          - light.flur
+        data:
+          hs_color:
+          - 0
+          - 0
+          brightness_pct: 20
+          transition: 6
+      - delay: 00:00:12
+musikmodus_hue_all:
+  alias: Musikmodus Hue All
+  mode: single
+  sequence:
+  - service: light.turn_on
+    target:
+      entity_id: light.hue_all
+    data:
+      brightness_pct: 60
+      hs_color:
+      - 0
+      - 100
+party_alle_hue_unterschiedlich_random:
+  alias: Party - alle Hue unterschiedlich (Random)
+  mode: single
+  sequence:
+  - variables:
+      group_entity: light.hue_all
+      lights: '{{ expand(group_entity) | map(attribute=''entity_id'') | list }}'
+  - repeat:
+      for_each: '{{ lights }}'
+      sequence:
+      - condition: template
+        value_template: "{{ 'hs' in (state_attr(repeat.item,'supported_color_modes')
+          or [])\n   or 'rgb' in (state_attr(repeat.item,'supported_color_modes')
+          or [])\n   or 'xy' in (state_attr(repeat.item,'supported_color_modes') or
+          []) }}"
+      - service: light.turn_on
+        target:
+          entity_id: '{{ repeat.item }}'
+        data:
+          brightness_pct: 60
+          hs_color:
+          - '{{ range(0, 360) | random }}'
+          - '{{ range(65, 100) | random }}'
+          transition: 2
+party_alle_hue_unterschiedlich_random_2:
+  alias: Party – alle Hue unterschiedlich (Random) (HS only)
+  mode: single
+  sequence:
+  - variables:
+      lights: "{{ expand('light.hue_all')\n   | selectattr('attributes.supported_color_modes','defined')\n
+        \  | selectattr('attributes.supported_color_modes','contains','hs')\n   |
+        map(attribute='entity_id') | list }}"
+  - repeat:
+      for_each: '{{ lights }}'
+      sequence:
+      - service: light.turn_on
+        target:
+          entity_id: '{{ repeat.item }}'
+        data:
+          brightness_pct: 65
+          transition: 2
+          hs_color:
+          - '{{ range(0, 360) | random }}'
+          - '{{ range(70, 100) | random }}'
+pause_all_player:
+  alias: Pause ALL Player
+  mode: single
+  sequence:
+  - service: media_player.media_pause
+    target:
+      entity_id:
+      - media_player.wiim1
+      - media_player.wiim2
+      - media_player.wiim3
+      - media_player.wiim4
+      - media_player.toi1
+      - media_player.toi2
+play_pause_all:
+  alias: Play / Pause ALL
+  mode: single
+  sequence:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: "{{ is_state('media_player.wiim1','playing')\n   or is_state('media_player.wiim2','playing')\n
+          \  or is_state('media_player.wiim3','playing')\n   or is_state('media_player.wiim4','playing')\n
+          \  or is_state('media_player.toi1','playing')\n   or is_state('media_player.toi2','playing')
+          }}"
+      sequence:
+      - service: media_player.media_pause
+        target:
+          entity_id:
+          - media_player.wiim1
+          - media_player.wiim2
+          - media_player.wiim3
+          - media_player.wiim4
+          - media_player.toi1
+          - media_player.toi2
+    default:
+    - service: media_player.media_play
+      target:
+        entity_id:
+        - media_player.wiim1
+        - media_player.wiim2
+        - media_player.wiim3
+        - media_player.wiim4
+        - media_player.toi1
+        - media_player.toi2
+spotify_playlist_abspielen:
+  alias: Spotify Playlist abspielen
+  mode: single
+  sequence:
+  - service: spotcast.start
+    data:
+      entity_id: media_player.spotify_otam
+      uri: "{% set p = states('input_select.spotify_playlist') %} {% if p == 'Daily
+        Drive' %}\n  spotify:playlist:3SVRLcSZG9FYNAYtfJKCWa\n{% elif p == 'Techno'
+        %}\n  spotify:playlist:DEINE_ID_2\n{% elif p == 'Chill' %}\n  spotify:playlist:DEINE_ID_3\n{%
+        else %}\n  spotify:playlist:3SVRLcSZG9FYNAYtfJKCWa\n{% endif %}"
+      shuffle: true
+      force_playback: true
+robocop_flow_starten:
+  alias: Robocop – Flow starten
+  mode: single
+  sequence:
+  - variables:
+      vac: vacuum.s8_maxv_ultra
+      floor: '{{ states(''input_select.vac_floor'') }}'
+      mode_v: '{{ states(''input_select.vac_mode'') }}'
+      intensity: '{{ states(''input_select.vac_intensity'') }}'
+      full: '{{ is_state(''input_boolean.vac_full_clean'',''on'') }}'
+      skip_name: '{{ states(''input_select.vac_skip_zone'') }}'
+      segmap_eg:
+        kueche: 16
+        wohnzimmer: 17
+        flur: 18
+      segmap_og:
+        schlafzimmer: 21
+        bad: 22
+        kinderzimmer: 23
+      eg_all: '{% set a=[] %}{% for k,v in segmap_eg.items() %}{% set _=a.append(v)
+        %}{% endfor %}{{ a }}'
+      og_all: '{% set a=[] %}{% for k,v in segmap_og.items() %}{% set _=a.append(v)
+        %}{% endfor %}{{ a }}'
+      segs_sel: "{% set lst = [] %} {% if floor == 'EG' %}\n  {% if is_state('input_boolean.room_eg_kueche','on')
+        %}{% set _ = lst.append(segmap_eg.kueche) %}{% endif %}\n  {% if is_state('input_boolean.room_eg_wohnzimmer','on')
+        %}{% set _ = lst.append(segmap_eg.wohnzimmer) %}{% endif %}\n  {% if is_state('input_boolean.room_eg_flur','on')
+        %}{% set _ = lst.append(segmap_eg.flur) %}{% endif %}\n{% else %}\n  {% if
+        is_state('input_boolean.room_og_schlafzimmer','on') %}{% set _ = lst.append(segmap_og.schlafzimmer)
+        %}{% endif %}\n  {% if is_state('input_boolean.room_og_bad','on') %}{% set
+        _ = lst.append(segmap_og.bad) %}{% endif %}\n  {% if is_state('input_boolean.room_og_kinderzimmer','on')
+        %}{% set _ = lst.append(segmap_og.kinderzimmer) %}{% endif %}\n{% endif %}
+        {{ lst }}"
+      skip_key: '{% set s = (skip_name|lower) %} {% set s = s|replace('' '','''')|replace(''ä'',''ae'')|replace(''ö'',''oe'')|replace(''ü'',''ue'')|replace(''ß'',''ss'')
+        %} {{ s }}'
+      skip_id: "{% if skip_name != 'Keine' %}\n  {% if floor == 'EG' %}\n    {{ segmap_eg.get(skip_key)
+        if (skip_key in segmap_eg) else none }}\n  {% else %}\n    {{ segmap_og.get(skip_key)
+        if (skip_key in segmap_og) else none }}\n  {% endif %}\n{% else %} {{ none
+        }} {% endif %}"
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ (not full) and (segs_sel | length == 0) }}'
+      sequence:
+      - service: persistent_notification.create
+        data:
+          title: Robocop
+          message: Keine Zimmer gewählt. Wähle Zimmer oder aktiviere 'Vollreinigung'.
+      - stop: Ende
+  - variables:
+      segs_base: '{% if full %} {{ eg_all if floor == ''EG'' else og_all }} {% else
+        %} {{ segs_sel }} {% endif %}'
+      segs_final: "{% if skip_id is not none %}\n  {% set out=[] %}\n  {% for s in
+        segs_base %}{% if s != skip_id %}{% set _=out.append(s) %}{% endif %}{% endfor
+        %}\n  {{ out }}\n{% else %} {{ segs_base }} {% endif %}"
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ segs_final | length == 0 }}'
+      sequence:
+      - service: persistent_notification.create
+        data:
+          title: Robocop
+          message: Keine Segmente übrig (evtl. nur 'Zone überspringen' gewählt?).
+      - stop: Ende
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ intensity == ''Intensiv'' }}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''select.s8_maxv_ultra_suction_level'') not
+              in [''unknown'',''unavailable'',''''] }}'
+          sequence:
+          - service: select.select_option
+            target:
+              entity_id: select.s8_maxv_ultra_suction_level
+            data:
+              option: Max
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''select.s8_maxv_ultra_fan_speed'') not in
+              [''unknown'',''unavailable'',''''] }}'
+          sequence:
+          - service: select.select_option
+            target:
+              entity_id: select.s8_maxv_ultra_fan_speed
+            data:
+              option: Max
+        - conditions:
+          - condition: template
+            value_template: '{{ state_attr(vac,''fan_speed'') is not none }}'
+          sequence:
+          - service: vacuum.set_fan_speed
+            target:
+              entity_id: '{{ vac }}'
+            data:
+              fan_speed: Max
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''switch.s8_maxv_ultra_deep_clean'') in [''off'',''on'']
+              }}'
+          sequence:
+          - service: switch.turn_on
+            target:
+              entity_id: switch.s8_maxv_ultra_deep_clean
+    - conditions:
+      - condition: template
+        value_template: '{{ intensity == ''Gründlich'' }}'
+      sequence:
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''select.s8_maxv_ultra_suction_level'') not
+              in [''unknown'',''unavailable'',''''] }}'
+          sequence:
+          - service: select.select_option
+            target:
+              entity_id: select.s8_maxv_ultra_suction_level
+            data:
+              option: Balanced
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''select.s8_maxv_ultra_fan_speed'') not in
+              [''unknown'',''unavailable'',''''] }}'
+          sequence:
+          - service: select.select_option
+            target:
+              entity_id: select.s8_maxv_ultra_fan_speed
+            data:
+              option: Balanced
+        - conditions:
+          - condition: template
+            value_template: '{{ state_attr(vac,''fan_speed'') is not none }}'
+          sequence:
+          - service: vacuum.set_fan_speed
+            target:
+              entity_id: '{{ vac }}'
+            data:
+              fan_speed: Balanced
+      - choose:
+        - conditions:
+          - condition: template
+            value_template: '{{ states(''switch.s8_maxv_ultra_deep_clean'') in [''off'',''on'']
+              }}'
+          sequence:
+          - service: switch.turn_off
+            target:
+              entity_id: switch.s8_maxv_ultra_deep_clean
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ mode_v == ''Wischen'' and states(''select.s8_maxv_ultra_mop_mode'')
+          not in [''unknown'',''unavailable'',''''] }}'
+      sequence:
+      - service: select.select_option
+        target:
+          entity_id: select.s8_maxv_ultra_mop_mode
+        data:
+          option: '{{ ''Deep'' if intensity == ''Intensiv'' else ''Standard'' }}'
+    - conditions:
+      - condition: template
+        value_template: '{{ mode_v == ''Saugen'' and states(''select.s8_maxv_ultra_mop_mode'')
+          not in [''unknown'',''unavailable'',''''] }}'
+      sequence:
+      - service: select.select_option
+        target:
+          entity_id: select.s8_maxv_ultra_mop_mode
+        data:
+          option: false
+  - service: vacuum.send_command
+    data:
+      entity_id: '{{ vac }}'
+      command: app_segment_clean
+      params: '{{ segs_final }}'
+robi_start_kueche:
+  alias: Robi – Start Küche
+  mode: single
+  sequence:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robi_last_job
+    data:
+      option: Küche
+  - service: button.press
+    target:
+      entity_id: button.s8_maxv_ultra_clean_kueche
+robi_start_flur:
+  alias: Robi – Start Flur
+  mode: single
+  sequence:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robi_last_job
+    data:
+      option: Flur
+  - service: button.press
+    target:
+      entity_id: button.s8_maxv_ultra_clean_flur
+robi_start_esszimmer:
+  alias: Robi – Start Esszimmer
+  mode: single
+  sequence:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robi_last_job
+    data:
+      option: Esszimmer
+  - service: button.press
+    target:
+      entity_id: button.s8_maxv_ultra_clean_esszimmer
+robi_start_wohnzimmer:
+  alias: Robi – Start Wohnzimmer
+  mode: single
+  sequence:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robi_last_job
+    data:
+      option: Wohnzimmer
+  - service: button.press
+    target:
+      entity_id: button.s8_maxv_ultra_clean_wohnzimmer
+garagentor_offnen_impuls:
+  alias: Garagentor öffnen (Impuls)
+  mode: single
+  sequence:
+  - service: switch.turn_on
+    target:
+      entity_id: switch.garagentor
+  - delay: 00:00:01
+  - service: switch.turn_off
+    target:
+      entity_id: switch.garagentor
+  description: ''
+garagentor_offnen_impuls_2:
+  alias: Garagentor öffnen (Impuls) 2
+  mode: single
+  sequence:
+  - service: switch.turn_on
+    target:
+      entity_id: switch.garagentor
+  - delay: 00:00:01
+  - service: switch.turn_off
+    target:
+      entity_id: switch.garagentor
+  description: ''
+kiss_brutalo_komplett:
+  alias: KISS | Brutalo Komplett
+  mode: restart
+  sequence:
+  - repeat:
+      count: 5
+      sequence:
+      - target:
+          entity_id: light.hue_alle
+        data:
+          color_name: red
+          brightness_pct: 100
+          transition: 0
+        action: light.turn_on
+      - delay: 00:00:01
+      - target:
+          entity_id: light.hue_alle
+        action: light.turn_off
+      - delay: 00:00:01
+  - target:
+      entity_id: input_boolean.kiss_hyperspace
+    action: input_boolean.turn_on
+  - delay: 00:00:05
+  - data:
+      title: "\U0001F48B KISS"
+      message: Ich lieb di so hart
+      data:
+        tag: kiss_hanna
+        notification_id: kiss_hanna
+    action: notify.mobile_app_hannas_iphone_2
+  - target:
+      entity_id: input_boolean.kiss_hyperspace
+    action: input_boolean.turn_off
+  description: ''
+snapshot_garten:
+  alias: Snapshot Garten
+  mode: queued
+  sequence:
+  - service: camera.snapshot
+    target:
+      entity_id: camera.garten
+    data:
+      filename: /config/www/snapshots/garten_latest.jpg
+  - service: shell_command.copy_garten_snapshot
+  description: ''
+kiss_brutalo_komplett_2:
+  alias: KISS | Brutalo Komplett
+  mode: restart
+  sequence:
+  - repeat:
+      count: 5
+      sequence:
+      - target:
+          entity_id: light.hue_alle
+        data:
+          color_name: red
+          brightness_pct: 100
+          transition: 0
+        action: light.turn_on
+      - delay: 00:00:01
+      - target:
+          entity_id: light.hue_alle
+        action: light.turn_off
+      - delay: 00:00:01
+  - target:
+      entity_id: input_boolean.kiss_hyperspace
+    action: input_boolean.turn_on
+  - delay: 00:00:05
+  - action: notify.mobile_app_hannas_iphone_2
+    data:
+      title: "\U0001F48B KISS"
+      message: Ich lieb di so hart
+      data:
+        tag: kiss_hanna
+        notification_id: kiss_hanna
+  - target:
+      entity_id: input_boolean.kiss_hyperspace
+    action: input_boolean.turn_off
+  description: ''
+kiss_brutalo_komplett_3:
+  alias: KISS | Brutalo Komplett
+  mode: restart
+  sequence:
+  - repeat:
+      count: 5
+      sequence:
+      - target:
+          entity_id: light.hue_alle
+        data:
+          color_name: red
+          brightness_pct: 100
+          transition: 0
+        action: light.turn_on
+      - delay: 00:00:01
+      - target:
+          entity_id: light.hue_alle
+        action: light.turn_off
+      - delay: 00:00:01
+  - target:
+      entity_id: input_boolean.kiss_hyperspace
+    action: input_boolean.turn_on
+  - delay: 00:00:05
+  - action: notify.mobile_app_hannas_iphone_2
+    data:
+      title: "\U0001F48B KISS"
+      message: Ich lieb di so hart
+      data:
+        tag: kiss_hanna
+        notification_id: kiss_hanna
+  - target:
+      entity_id: input_boolean.kiss_hyperspace
+    action: input_boolean.turn_off
+  description: ''

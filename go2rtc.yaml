@@ -1,0 +1,8 @@
+
+api:
+  listen: ":1984"
+rtsp:
+  listen: ":8554"
+streams:
+  eufy_garten: hass://camera.garten
+  eufy_garage: hass://camera.garage

@@ -1,0 +1,30 @@
+card-mod-root-yaml: |
+  :host, ha-app { background: #0B0C10 !important; }
+
+  ha-app::before {
+    content: "";
+    position: fixed;
+    inset: -40%;
+    pointer-events: none;
+    z-index: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(138,90,200,0.00) 35%,
+      rgba(138,90,200,0.12) 48%,
+      rgba(138,90,200,0.22) 50%,
+      rgba(138,90,200,0.12) 52%,
+      rgba(138,90,200,0.00) 65%
+    );
+    filter: blur(22px);
+    opacity: 0.9;
+    transform: translate3d(-14%, -10%, 0);
+    animation: violetStripeMove 22s ease-in-out infinite;
+  }
+
+  ha-app > * { position: relative; z-index: 1; }
+
+  @keyframes violetStripeMove {
+    0%   { transform: translate3d(-14%, -10%, 0); opacity: 0.75; }
+    50%  { transform: translate3d( 14%,  10%, 0); opacity: 1.00; }
+    100% { transform: translate3d(-14%, -10%, 0); opacity: 0.75; }
+  }

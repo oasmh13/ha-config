@@ -1,0 +1,10 @@
+dark_violet_stripe_anim:
+  modes:
+    dark:
+      primary-background-color: "#0B0C10"
+      card-background-color: "#0E0F14"
+      primary-text-color: "#E6D2FF"
+      accent-color: "#8A5AC8"
+      primary-color: "#8A5AC8"
+      card-mod-theme: dark_violet_stripe_anim
+      lovelace-background: "#0B0C10"

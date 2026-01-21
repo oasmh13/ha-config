@@ -1,0 +1,17 @@
+- platform: rest
+  name: tankerkonig_94060_raw
+  scan_interval: 600
+  timeout: 20
+  resource: >-
+   "https://creativecommons.tankerkoenig.de/json/list.php?lat=48.4015&lng=13.3132&rad=17&sort=price&type=all&apikey=4887d73b-a23e-4581-add8-d10ebac8ae88
+  value_template: "OK"
+  json_attributes:
+    - stations
+- platform: rest
+  name: tankerkonig_94060_raw
+  scan_interval: 600
+  timeout: 20
+  resource: "https://creativecommons.tankerkoenig.de/json/list.php?lat=48.4015&lng=13.3132&rad=17&sort=price&type=all&apikey=!secret tankerkoenig_api_key"
+  value_template: "OK"
+  json_attributes:
+    - stations

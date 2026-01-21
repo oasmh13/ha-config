@@ -1,0 +1,6 @@
+- resource: https://ohmanda.com/api/horoscope/aquarius
+  scan_interval: 21600
+  sensor:
+    - name: Horoskop Wassermann EN
+      unique_id: horoskop_wassermann_en
+      value_template: "{{ value_json.horoscope }}"

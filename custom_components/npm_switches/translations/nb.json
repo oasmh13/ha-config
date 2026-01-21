@@ -1,0 +1,38 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "NPM",
+                "description": "Hvis du trenger hjep til konfigurasjon ta en titt her: https://github.com/InTheDaylight14/nginx-proxy-manager-switches",
+                "data": {
+                    "username": "Brukernavn",
+                    "password": "Passord",
+                    "npm_url": "http://ip:port",
+                    "include_proxy_hosts": "Inkluder proxy-verter",
+                    "include_redirection_hosts": "Inkluder omdirigeringsverter",
+                    "include_stream_hosts": "Inkluder strømverter",
+                    "include_dead_hosts": "Inkluder døde verter",
+                    "include_enable_disable_count_sensors": "Inkluder aktiverte/deaktiverte tellesensorer",
+                    "include_certificate_sensors": "Inkluder sertifikatsensorer og knapper"
+                }
+            }
+        },
+        "error": {
+            "auth": "Brukernavn/Passord er feil."
+        },
+        "abort": {
+            "single_instance_allowed": "Denne integrasjonen kan kun konfigureres en gang."
+        }
+    },
+    "options": {
+        "step": {
+            "user": {
+                "data": {
+                    "binary_sensor": "Binær sensor aktivert",
+                    "sensor": "Sensor aktivert",
+                    "switch": "Bryter aktivert"
+                }
+            }
+        }
+    }
+}

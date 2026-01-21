@@ -1,0 +1,14 @@
+button.shelly1pmminig3_3030f9e67cdc_restart:
+  grouped_sort_order: 1
+button.garagentor_neu_starten:
+  grouped_sort_order: 2
+  favorite: true
+binary_sensor.vordertur_debug_station:
+  favorite: true
+cover.licht_garage:
+  favorite: true
+select.garten_video_recording_quality:
+  favorite: true
+climate.room_climate_badezimmer_og:
+  hidden: true
+  disabled: true

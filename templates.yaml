@@ -1,0 +1,429 @@
+template:
+  # =========================
+  # Binary Sensoren
+  # =========================
+  - binary_sensor:
+      - name: "Garagentor offen logisch"
+        unique_id: garagentor_offen_logisch
+        device_class: garage_door
+        state: "{{ is_state('binary_sensor.tor_offen_zu', 'on') }}"
+
+      - name: "Garagentor geschlossen logisch"
+        unique_id: garagentor_geschlossen_logisch
+        device_class: garage_door
+        state: "{{ is_state('binary_sensor.tor_offen_zu', 'off') }}"
+
+      # Irgendein echter Fehler aktiv? (Problem-Device-Class, Updates, Restart-Required)
+      - name: any_problem_active
+        unique_id: any_problem_active
+        device_class: problem
+        state: >
+          {% set problems = states.binary_sensor
+             | selectattr('attributes.device_class','eq','problem')
+             | selectattr('state','eq','on') | list %}
+          {% set updates  = states.update
+             | selectattr('state','eq','on') | list %}
+          {% set restarts = states
+             | selectattr('entity_id','search','restart_required')
+             | selectattr('state','eq','on') | list %}
+          {{ (problems|count + updates|count + restarts|count) > 0 }}
+
+      # Irgendeine Wartung bald fällig?
+      - name: maintenance_any_due
+        unique_id: maintenance_any_due
+        state: "{{ states('sensor.maintenance_due_count')|int(0) > 0 }}"
+
+  # =========================
+  # Sensoren
+  # =========================
+  - sensor:
+      - name: "Tankerkönig Status Test"
+        state: >
+          {% set st = state_attr('sensor.tankerkonig_94060_raw', 'stations') %}
+          {% if st is none %}
+            keine_daten
+          {% else %}
+            {{ st | length }}_stationen
+          {% endif %}
+
+      - name: "Horoskop Wassermann"
+        state: "{{ states('sensor.horoskop_wassermann_en') }}"
+
+      - name: Daisy Birthday Info
+        unique_id: daisy_birthday_info
+        state: >
+          {% set today = now().date() %}
+          {% set next = strptime(today.year ~ '-01-23','%Y-%m-%d').date() %}
+          {% set next = next if next >= today else strptime((today.year + 1) ~ '-01-23','%Y-%m-%d').date() %}
+          {{ (next - today).days }}
+        attributes:
+          days_left: >
+            {% set today = now().date() %}
+            {% set next = strptime(today.year ~ '-01-23','%Y-%m-%d').date() %}
+            {% set next = next if next >= today else strptime((today.year + 1) ~ '-01-23','%Y-%m-%d').date() %}
+            {{ (next - today).days }}
+          turning: >
+            {% set dob = strptime('1993-01-23','%Y-%m-%d').date() %}
+            {% set today = now().date() %}
+            {% set next = strptime(today.year ~ '-01-23','%Y-%m-%d').date() %}
+            {% set next = next if next >= today else strptime((today.year + 1) ~ '-01-23','%Y-%m-%d').date() %}
+            {{ next.year - dob.year }}
+          next_date: >
+            {% set today = now().date() %}
+            {% set next = strptime(today.year ~ '-01-23','%Y-%m-%d').date() %}
+            {% set next = next if next >= today else strptime((today.year + 1) ~ '-01-23','%Y-%m-%d').date() %}
+            {{ next.strftime('%d.%m.%Y') }}
+          is_today: >
+            {% set today = now().date() %}
+            {% set next = strptime(today.year ~ '-01-23','%Y-%m-%d').date() %}
+            {% set next = next if next >= today else strptime((today.year + 1) ~ '-01-23','%Y-%m-%d').date() %}
+            {{ (next - today).days == 0 }}
+
+      - name: Roborock Raum-Mapping
+        unique_id: roborock_raum_mapping
+        state: "{{ now().strftime('%Y-%m-%d %H:%M:%S') }}"
+        attributes:
+          source_entity: vacuum.s8_maxv_ultra
+          app_segment_id_map: "{{ state_attr('vacuum.s8_maxv_ultra','app_segment_id_map') }}"
+          segment_names: "{{ state_attr('vacuum.s8_maxv_ultra','segment_names') }}"
+          segments: "{{ state_attr('vacuum.s8_maxv_ultra','segments') }}"
+          mapping_list: >-
+            {% set m = state_attr('vacuum.s8_maxv_ultra','app_segment_id_map') %}
+            {% if m %}
+              {% for name, id in m.items() -%}
+              {{ name }} → {{ id }}{{ '\n' if not loop.last else '' }}
+              {%- endfor %}
+            {% else %}—{% endif %}
+
+      - name: roborock_ui_color
+        state: >
+          {% set i = states('input_number.roborock_ui_intensity') | float(0.8) %}
+          {% set s = states('vacuum.roborock') %}
+          {% if s == 'cleaning' %}
+            rgba(0,180,90,{{ i }})
+          {% elif s in ['mopping', 'cleaning_mop', 'mop', 'mop_cleaning'] %}
+            rgba(0,190,200,{{ i }})
+          {% elif s in ['docked','charging','returning'] %}
+            rgba(0,140,200,0.65)
+          {% else %}
+            rgba(40,40,40,0.35)
+          {% endif %}
+
+      - name: "S8 MaxV Ultra Batterie"
+        unique_id: s8_maxv_ultra_batterie
+        unit_of_measurement: "%"
+        state: "{{ state_attr('vacuum.s8_maxv_ultra', 'battery_level') | int(0) }}"
+        icon: >
+          {% set b = state_attr('vacuum.s8_maxv_ultra', 'battery_level') | int(0) %}
+          {% if b >= 95 %} mdi:battery
+          {% elif b >= 80 %} mdi:battery-80
+          {% elif b >= 60 %} mdi:battery-60
+          {% elif b >= 40 %} mdi:battery-40
+          {% elif b >= 20 %} mdi:battery-20
+          {% else %} mdi:battery-alert
+          {% endif %}
+
+      - name: "Tankerkönig Top 3 E5"
+        unique_id: tankerkoenig_top3_e5
+        icon: mdi:gas-station
+        state: >
+          {% set st = state_attr('sensor.tankerkonig_94060_raw','stations') or [] %}
+          {% set open = st | selectattr('isOpen','equalto',true) | list %}
+          {% set priced = open
+            | selectattr('e5','defined')
+            | selectattr('e5','number')
+            | list %}
+          {{ 'ok' if priced|length > 0 else 'keine_daten' }}
+        attributes:
+          top3: >
+            {% set st = state_attr('sensor.tankerkonig_94060_raw','stations') or [] %}
+            {% set open = st | selectattr('isOpen','equalto',true) | list %}
+            {% set priced = open
+              | selectattr('e5','defined')
+              | selectattr('e5','number')
+              | list %}
+            {% if priced|length == 0 %}
+              []
+            {% else %}
+              {% set sorted = priced | sort(attribute='e5') %}
+              {% set top = sorted[:3] %}
+              {% set out = [] %}
+              {% for s in top %}
+                {% set out = out + [{
+                  'name': s.name,
+                  'brand': (s.brand if s.brand is defined else ''),
+                  'price': s.e5,
+                  'street': (s.street if s.street is defined else ''),
+                  'place': (s.place if s.place is defined else '')
+                }] %}
+              {% endfor %}
+              {{ out }}
+            {% endif %}
+
+      # Bosch Räume
+      - name: "Esszimmer Ist-Temperatur"
+        unique_id: bosch_esszimmer_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_esszimmer', 'current_temperature') | float(0) }}"
+      - name: "Esszimmer Soll-Temperatur"
+        unique_id: bosch_esszimmer_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_esszimmer', 'temperature') | float(0) }}"
+
+      - name: "Bad OG Ist-Temperatur"
+        unique_id: bosch_bad_og_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_badezimmer_og', 'current_temperature') | float(0) }}"
+      - name: "Bad OG Soll-Temperatur"
+        unique_id: bosch_bad_og_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_badezimmer_og', 'temperature') | float(0) }}"
+
+      - name: "WC EG Ist-Temperatur"
+        unique_id: bosch_wc_eg_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_wc_eg', 'current_temperature') | float(0) }}"
+      - name: "WC EG Soll-Temperatur"
+        unique_id: bosch_wc_eg_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_wc_eg', 'temperature') | float(0) }}"
+
+      - name: "Schuhraum Ist-Temperatur"
+        unique_id: bosch_schuhraum_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_schuhraum', 'current_temperature') | float(0) }}"
+      - name: "Schuhraum Soll-Temperatur"
+        unique_id: bosch_schuhraum_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_schuhraum', 'temperature') | float(0) }}"
+
+      - name: "Wohnzimmer Ist-Temperatur"
+        unique_id: bosch_wohnzimmer_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_wohnzimmer', 'current_temperature') | float(0) }}"
+      - name: "Wohnzimmer Soll-Temperatur"
+        unique_id: bosch_wohnzimmer_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_wohnzimmer', 'temperature') | float(0) }}"
+
+      - name: "Gang EG Ist-Temperatur"
+        unique_id: bosch_gang_eg_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_gang_eg', 'current_temperature') | float(0) }}"
+      - name: "Gang EG Soll-Temperatur"
+        unique_id: bosch_gang_eg_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_gang_eg', 'temperature') | float(0) }}"
+
+      - name: "Küche Ist-Temperatur"
+        unique_id: bosch_kuche_ist_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_kuche', 'current_temperature') | float(0) }}"
+      - name: "Küche Soll-Temperatur"
+        unique_id: bosch_kuche_soll_temperatur
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+        state: "{{ state_attr('climate.room_climate_kuche', 'temperature') | float(0) }}"
+
+      # Shelly Summen
+      - name: "Shelly Gesamtverbrauch"
+        unit_of_measurement: "kWh"
+        state: >
+          {{ states.sensor
+             | selectattr('attributes.device_class','eq','energy')
+             | selectattr('entity_id','search','shelly')
+             | map(attribute='state')
+             | map('float', 0)
+             | sum
+             | round(2) }}
+
+      - name: "Shelly Gesamtleistung"
+        unit_of_measurement: "W"
+        state: >
+          {{
+            [
+              states('sensor.frei_leistung'),
+              states('sensor.shellypro4pm_6825ddd5fe40_switch_0_leistung')
+            ]
+            | map('float', 0)
+            | sum
+            | round(0) }}
+
+      - name: "Shelly Gesamtenergie"
+        unit_of_measurement: "kWh"
+        state: >
+          {{
+            [
+              states('sensor.frei_energie'),
+              states('sensor.shellypro4pm_6825ddd5fe40_switch_0_energie')
+            ]
+            | map('float', 0)
+            | sum
+            | round(3) }}
+
+      - name: "Shelly Gesamteinspeisung"
+        unit_of_measurement: "kWh"
+        state: >
+          {{
+            [
+              states('sensor.frei_energieeinspeisung'),
+              states('sensor.shellypro4pm_6825ddd5fe40_switch_0_energieeinspeisung')
+            ]
+            | map('float', 0)
+            | sum
+            | round(3) }}
+
+      - name: "Shelly Netzbezug Netto"
+        unit_of_measurement: "kWh"
+        state: >
+          {{
+            (states('sensor.shelly_gesamtenergie')|float(0))
+            - (states('sensor.shelly_gesamteinspeisung')|float(0))
+            | round(3) }}
+
+      # Wartung: Reststunden (einmalig, Duplikat entfernt)
+      - name: wartung_reststunden
+        unique_id: wartung_reststunden
+        unit_of_measurement: "h"
+        state: >
+          {% set tage = states('sensor.roboter_filter_resttage')|float(999) %}
+          {{ (tage * 24) | round(0) }}
+
+      # Problemzähler + Listen
+      - name: problem_count
+        unique_id: problem_count
+        state: >
+          {% set problems = states.binary_sensor
+             | selectattr('attributes.device_class','eq','problem')
+             | selectattr('state','eq','on') | list %}
+          {% set updates  = states.update
+             | selectattr('state','eq','on') | list %}
+          {% set restarts = states
+             | selectattr('entity_id','search','restart_required')
+             | selectattr('state','eq','on') | list %}
+          {{ problems|count + updates|count + restarts|count }}
+        attributes:
+          problems: >
+            {{ (states.binary_sensor
+               | selectattr('attributes.device_class','eq','problem')
+               | selectattr('state','eq','on')
+               | map(attribute='name') | list) }}
+          updates: >
+            {{ (states.update
+               | selectattr('state','eq','on')
+               | map(attribute='name') | list) }}
+          restarts: >
+            {{ (states
+               | selectattr('entity_id','search','restart_required')
+               | selectattr('state','eq','on')
+               | map(attribute='name') | list) }}
+
+      # Wartungen bald fällig
+      - name: maintenance_due_count
+        unique_id: maintenance_due_count
+        state: >
+          {% set hthr = 480 %}
+          {% set dthr = 20 %}
+          {% set by_hours = states.sensor
+             | selectattr('entity_id','search','reststunden$')
+             | selectattr('state','defined') | list %}
+          {% set by_days  = states.sensor
+             | selectattr('entity_id','search','resttage$')
+             | selectattr('state','defined') | list %}
+          {% set cnt_h = by_hours
+             | map(attribute='state') | map('float', 999999) | select('lt', hthr) | list | count %}
+          {% set cnt_d = by_days
+             | map(attribute='state') | map('float', 999999) | select('lt', dthr) | list | count %}
+          {{ cnt_h + cnt_d }}
+        attributes:
+          due_list: >
+            {% set hthr = 480 %}
+            {% set dthr = 20 %}
+            {% set items = [] %}
+            {% for s in states.sensor | selectattr('entity_id','search','reststunden$') %}
+              {% if (s.state|float(999999)) < hthr %}
+                {% set items = items + [ s.name ~ ' (' ~ s.state ~ ' h)' ] %}
+              {% endif %}
+            {% endfor %}
+            {% for s in states.sensor | selectattr('entity_id','search','resttage$') %}
+              {% if (s.state|float(999999)) < dthr %}
+                {% set items = items + [ s.name ~ ' (' ~ s.state ~ ' d)' ] %}
+              {% endif %}
+            {% endfor %}
+            {{ items }}
+
+      - name: "Hue Temp 5 Ø 24h"
+        unit_of_measurement: "°C"
+        state: "{{ state_attr('sensor.hue_motion_sensor_5_temperatur','mean') }}"
+
+      # Summe aller Shelly-Energie (neuer Name, um Namens-Duplikat zu vermeiden)
+      - name: "Shelly Gesamtenergie Summe"
+        unique_id: shelly_gesamtenergie_sum
+        unit_of_measurement: "kWh"
+        device_class: energy
+        state_class: total_increasing
+        state: >
+          {% set ents = states.sensor
+            | selectattr('entity_id','search','shelly')
+            | selectattr('attributes.unit_of_measurement','equalto','kWh')
+            | map(attribute='state') | list %}
+          {% set nums = ents | map('float', 0) | list %}
+          {{ (nums | sum) | round(6) }}
+
+      # AdGuard Gesamtstatus (ON / OFF / MIXED)
+      - name: "AdGuard Status"
+        unique_id: adguard_status
+        state: >
+          {% set sw = [
+            'switch.adguard_home_schutz',
+            'switch.adguard_home_filterung',
+            'switch.adguard_home_safe_browsing',
+            'switch.adguard_home_sichere_suche',
+            'switch.adguard_home_jugendschutz',
+            'switch.adguard_home_abfrageprotokoll'
+          ] %}
+          {% set on = sw | select('is_state', 'on') | list | length %}
+          {% set total = sw | length %}
+          {% if on == total %} ON
+          {% elif on == 0 %} OFF
+          {% else %} MIXED
+          {% endif %}
+        attributes:
+          on_count: >
+            {% set sw = [
+              'switch.adguard_home_schutz',
+              'switch.adguard_home_filterung',
+              'switch.adguard_home_safe_browsing',
+              'switch.adguard_home_sichere_suche',
+              'switch.adguard_home_jugendschutz',
+              'switch.adguard_home_abfrageprotokoll'
+            ] %}
+            {{ sw | select('is_state', 'on') | list | length }}
+          total: 6

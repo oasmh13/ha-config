@@ -1,0 +1,16 @@
+home-assistant_v2.db*
+*.db
+*.sqlite
+*.log
+*.log.*
+.storage/
+secrets.yaml
+.cloud/
+deps/
+tts/
+__pycache__/
+*.pyc
+.backups/
+tmp/
+zigbee.db*
+www/

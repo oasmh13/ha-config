@@ -1,0 +1,12 @@
+dark_control:
+  app-header-background-color: "#0B141A"
+  app-header-text-color: "#FFFFFF"
+
+  primary-text-color: "#E6E8EA"
+  secondary-text-color: "#A7B0B7"
+
+  paper-item-icon-color: "#7E8A93"
+  paper-item-icon-active-color: "#FFFFFF"
+
+  state-icon-color: "#A7B0B7"
+  state-icon-active-color: "#FFFFFF"

@@ -1,0 +1,23 @@
+input_boolean:
+  kiss_hyperspace:
+    name: Kiss Hyperspace
+
+script:
+  kiss_master_sequence:
+    alias: "KISS | Master Sequence"
+    mode: restart
+    sequence:
+      - service: input_boolean.turn_on
+        target:
+          entity_id: input_boolean.kiss_hyperspace
+
+      - delay: "00:01:00"
+
+      - service: notify.mobile_app_bruce_wayne
+        data:
+          title: "💋 KISS"
+          message: "Ich lieb di so hart"
+
+      - service: input_boolean.turn_off
+        target:
+          entity_id: input_boolean.kiss_hyperspace

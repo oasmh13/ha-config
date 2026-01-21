@@ -1,0 +1,51 @@
+shelly_energy_daily:
+  source: sensor.shelly_gesamtenergie
+  cycle: daily
+
+shelly_energy_monthly:
+  source: sensor.shelly_gesamtenergie
+  cycle: monthly
+
+shelly_energy_yearly:
+  source: sensor.shelly_gesamtenergie
+  cycle: yearly
+
+shelly_feed_daily:
+  source: sensor.shelly_gesamteinspeisung
+  cycle: daily
+
+shelly_feed_monthly:
+  source: sensor.shelly_gesamteinspeisung
+  cycle: monthly
+
+shelly_feed_yearly:
+  source: sensor.shelly_gesamteinspeisung
+  cycle: yearly
+
+shelly_net_daily:
+  source: sensor.shelly_netzbezug_netto
+  cycle: daily
+
+pro1pm_ec62608c168c_woechentlich:
+  name: "Pro1PM – Woche"
+  source: sensor.shellypro1pm_ec62608c168c_energie
+  cycle: weekly
+
+pro1pm_ec62608c168c_monatlich:
+  name: "Pro1PM – Monat"
+  source: sensor.shellypro1pm_ec62608c168c_energie
+  cycle: monthly
+
+pro1pm_ec62608c168c_quartal:
+  name: "Pro1PM – Quartal"
+  source: sensor.shellypro1pm_ec62608c168c_energie
+  cycle: quarterly
+
+pro1pm_ec62608c168c_jaehrlich:
+  name: "Pro1PM – Jahr"
+  source: sensor.shellypro1pm_ec62608c168c_energie
+  cycle: yearly
+shelly_plug_tag:
+  name: Shelly Plug – Tag
+  source: sensor.shellyplugsg3_d0cf13ca11f8_energie
+  cycle: daily

@@ -1,0 +1,25 @@
+group:
+  og_light:
+    name: OG Light
+    entities:
+      - light.og_wohnzimmer
+      - light.og_flur
+      - light.og_bad
+      - light.og_schlafzimmer
+
+  speaker_all:
+    name: Speaker All
+    entities:
+      - media_player.wiim1
+      - media_player.wiim2
+      - media_player.wiim3
+      - media_player.wiim4
+      - media_player.toi1
+      - media_player.toi2
+
+  shelly_stromverbrauch:
+    name: "Shelly – Stromverbrauch"
+    entities:
+      - sensor.shellypro1pm_ec62608c168c_energie
+      - sensor.shellypro4pm_xxxxx_energie
+      - sensor.shelly3em_yyyyy_energy

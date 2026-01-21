@@ -1,0 +1,687 @@
+- id: audio_all_plus5
+  alias: Audio Alle +5%
+  mode: single
+  trigger:
+  - platform: event
+    event_type: mobile_app_button
+    event_data:
+      action: AUDIO_PLUS5
+  action:
+  - service: media_player.volume_up
+    target:
+      entity_id: media_player.audio_all
+- id: teufel_toi1_cap_30
+  alias: Teufel toi1 – Lautstärke max 30 Prozent
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: media_player.toi1
+    attribute: volume_level
+  condition:
+  - condition: numeric_state
+    entity_id: media_player.toi1
+    attribute: volume_level
+    above: 0.3
+  action:
+  - service: media_player.volume_set
+    target:
+      entity_id: media_player.toi1
+    data:
+      volume_level: 0.3
+- id: audio_20_on_ha_start
+  alias: Audio – Volume 20% bei Home Assistant Start
+  mode: single
+  trigger:
+  - platform: homeassistant
+    event: start
+  action:
+  - service: media_player.volume_set
+    target:
+      entity_id:
+      - media_player.wiim1
+      - media_player.wiim2
+      - media_player.wiim3
+      - media_player.wiim4
+      - media_player.toi1
+      - media_player.toi2
+    data:
+      volume_level: 0.2
+- id: garagentor_sensor_check
+  alias: Garagentor Sensor-Check (Bosch primär)
+  mode: single
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.garagentor_bosch_contact
+    - binary_sensor.garagentor_shelly_contact
+  condition:
+  - condition: template
+    value_template: "{{ states('binary_sensor.garagentor_bosch_contact') in ['on','off']\n
+      \  and states('binary_sensor.garagentor_shelly_contact') in ['on','off']\n   and
+      states('binary_sensor.garagentor_bosch_contact')\n       != states('binary_sensor.garagentor_shelly_contact')
+      }}"
+  action:
+  - service: notify.notify
+    data:
+      title: Garagentor Statusabweichung
+      message: Bosch={{ states('binary_sensor.garagentor_bosch_contact') }}, Shelly={{
+        states('binary_sensor.garagentor_shelly_contact') }}. Bitte Kontakt prüfen.
+- id: garage_last_snapshot_1min
+  alias: 'Garage: Snapshot (nur letztes) nach 1 Minute'
+  mode: restart
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.tor_offen_zu
+    to: 'on'
+  - platform: state
+    entity_id: binary_sensor.tor_offen_zu
+    to: 'off'
+  - platform: state
+    entity_id: script.garagentor_offnen_impuls
+    to: 'on'
+  action:
+  - delay: 00:01:00
+  - service: camera.snapshot
+    data:
+      entity_id: camera.garten
+      filename: /config/www/snapshots/garten_last.jpg
+  - service: notify.notify
+    data:
+      title: Garage
+      message: Snapshot aktualisiert.
+      data:
+        image: /local/snapshots/garten_last.jpg
+- id: treppenhaus_led
+  alias: Treppenhaus Led
+  mode: single
+  trigger:
+  - platform: sun
+    event: sunset
+    offset: 01:00:00
+  action:
+  - service: light.turn_on
+    target:
+      entity_id:
+      - light.hue_resonate_outdoor_wall_2
+      - light.hue_resonate_outdoor_wall_1
+    data:
+      rgb_color:
+      - 214
+      - 214
+      - 214
+      brightness_pct: 27
+- id: robi_eg_sequence_rooms
+  alias: Robi – EG komplett (Küche, Flur, Esszimmer, Wohnzimmer)
+  description: Sequenzreinigung EG
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: input_boolean.robi_eg_start
+    to: 'on'
+  condition:
+  - condition: state
+    entity_id: vacuum.s8_maxv_ultra
+    state: docked
+  action:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robi_last_job
+    data:
+      option: EG komplett
+  - service: script.robi_start_kueche
+  - wait_template: '{{ is_state(''vacuum.s8_maxv_ultra'',''cleaning'') }}'
+    timeout: 00:00:30
+    continue_on_timeout: true
+  - wait_for_trigger:
+    - platform: state
+      entity_id: vacuum.s8_maxv_ultra
+      to: docked
+    timeout: 01:30:00
+  - delay: 00:00:03
+  - service: script.robi_start_flur
+  - wait_template: '{{ is_state(''vacuum.s8_maxv_ultra'',''cleaning'') }}'
+    timeout: 00:00:30
+    continue_on_timeout: true
+  - wait_for_trigger:
+    - platform: state
+      entity_id: vacuum.s8_maxv_ultra
+      to: docked
+    timeout: 01:30:00
+  - delay: 00:00:03
+  - service: script.robi_start_esszimmer
+  - wait_template: '{{ is_state(''vacuum.s8_maxv_ultra'',''cleaning'') }}'
+    timeout: 00:00:30
+    continue_on_timeout: true
+  - wait_for_trigger:
+    - platform: state
+      entity_id: vacuum.s8_maxv_ultra
+      to: docked
+    timeout: 01:30:00
+  - delay: 00:00:03
+  - service: script.robi_start_wohnzimmer
+  - wait_template: '{{ is_state(''vacuum.s8_maxv_ultra'',''cleaning'') }}'
+    timeout: 00:00:30
+    continue_on_timeout: true
+  - wait_for_trigger:
+    - platform: state
+      entity_id: vacuum.s8_maxv_ultra
+      to: docked
+    timeout: 01:30:00
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.robi_eg_start
+- id: garage_offen_3min_alarm_an
+  alias: Garage offen >3 min → Alarm AN
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.tor_offen_zu
+    to: 'on'
+    for: 00:03:00
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.garage_alarm_3_min
+  - service: persistent_notification.create
+    data:
+      title: Garage offen
+      message: Tor seit 3 Minuten offen. Alarm aktiv.
+      notification_id: garage_alarm_notice
+- id: garage_zu_alarm_aus
+  alias: Garage zu → Alarm AUS
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: binary_sensor.tor_offen_zu
+    to: 'off'
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.garage_alarm_3_min
+  - service: persistent_notification.dismiss
+    data:
+      notification_id: garage_alarm_notice
+- id: '1768390092709'
+  alias: Wartung - Status Text setzen
+  mode: restart
+  trigger:
+  - platform: state
+    entity_id:
+    - binary_sensor.frei_uberhitzung
+    - binary_sensor.frei_uberlast
+    - binary_sensor.shelly1g3_b08184a2e908_restart_required
+    - sensor.hue_motion_sensor_1_battery
+    - sensor.roboter_filter_resttage
+  variables:
+    kritisch: "{{ is_state('binary_sensor.frei_uberhitzung','on')\n   or is_state('binary_sensor.frei_uberlast','on')\n
+      \  or is_state('binary_sensor.shelly1g3_b08184a2e908_restart_required','on')
+      }}"
+    demnaechst: "{{ (states('sensor.hue_motion_sensor_1_battery')|int(100) < 30)\n
+      \  or (states('sensor.roboter_filter_resttage')|int(999) < 10) }}"
+  action:
+  - service: input_text.set_value
+    target:
+      entity_id: input_text.naechste_wartung_text
+    data:
+      value: '{% if kritisch %}SOFORT {% elif demnaechst %}DEMNÄCHST {% else %}ALLES
+        OK {% endif %}'
+- id: '1768391706313'
+  alias: Roborock – Haus leer → Saugen
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: group.family
+    to: not_home
+    for: 00:03:00
+  condition:
+  - condition: state
+    entity_id: input_boolean.robocop_done_today
+    state: 'off'
+  - condition: state
+    entity_id: vacuum.s8_maxv_ultra
+    state: docked
+  - condition: state
+    entity_id: input_select.robocop_phase
+    state: idle
+  action:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robocop_phase
+    data:
+      option: vacuum
+  - service: vacuum.start
+    target:
+      entity_id: vacuum.s8_maxv_ultra
+- id: '1768391726570'
+  alias: Roborock – Saugen fertig → Wischen
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: vacuum.s8_maxv_ultra
+    to: docked
+  condition:
+  - condition: state
+    entity_id: input_select.robocop_phase
+    state: vacuum
+  - condition: state
+    entity_id: group.family
+    state: not_home
+  action:
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robocop_phase
+    data:
+      option: mop
+  - delay: 00:01:00
+  - service: vacuum.start
+    target:
+      entity_id: vacuum.s8_maxv_ultra
+- id: '1768391747523'
+  alias: Roborock – Wischen fertig → Abschluss
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: vacuum.s8_maxv_ultra
+    to: docked
+  condition:
+  - condition: state
+    entity_id: input_select.robocop_phase
+    state: mop
+  action:
+  - service: input_boolean.turn_on
+    target:
+      entity_id: input_boolean.robocop_done_today
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robocop_phase
+    data:
+      option: idle
+- id: '1768391769145'
+  alias: Roborock – Heimkommen → Dock
+  mode: restart
+  trigger:
+  - platform: state
+    entity_id: group.family
+    to: home
+  action:
+  - service: vacuum.pause
+    target:
+      entity_id: vacuum.s8_maxv_ultra
+  - delay: 00:00:10
+  - service: vacuum.return_to_base
+    target:
+      entity_id: vacuum.s8_maxv_ultra
+- id: '1768391850010'
+  alias: Roborock – Tagesreset
+  mode: single
+  trigger:
+  - platform: time
+    at: 00:05:00
+  action:
+  - service: input_boolean.turn_off
+    target:
+      entity_id: input_boolean.robocop_done_today
+  - service: input_select.select_option
+    target:
+      entity_id: input_select.robocop_phase
+    data:
+      option: idle
+- id: '1768391929178'
+  alias: Roborock – Wieder weg → Resume
+  mode: single
+  trigger:
+  - platform: state
+    entity_id: group.family
+    to: not_home
+    for: 00:03:00
+  condition:
+  - condition: state
+    entity_id: input_boolean.robocop_done_today
+    state: 'off'
+  - condition: not
+    conditions:
+    - condition: state
+      entity_id: input_select.robocop_phase
+      state: idle
+  action:
+  - service: vacuum.start
+    target:
+      entity_id: vacuum.s8_maxv_ultra
+- id: og_motion_auto
+  alias: EG  BWM keine Bewegung nach 3 min LICHT EG aus
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.hue_motion_sensor_4_bewegung
+    to:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 3
+      seconds: 0
+    id: motion_off
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      entity_id: switch.shellypro4pm_6825ddd5fe40_switch_0
+    data: {}
+  mode: single
+  max_exceeded: silent
+- id: '1768535530622'
+  alias: EG Autmatoesierung mit BWM EG
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.hue_motion_sensor_4_bewegung
+    from:
+    - 'off'
+    to:
+    - 'on'
+    id: motion_on
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    target:
+      entity_id: switch.shellypro4pm_6825ddd5fe40_switch_0
+    data: {}
+  mode: single
+  max_exceeded: silent
+- id: '1768535968694'
+  alias: 'LICHT Garage EIN  mit BWM '
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.hue_motion_sensor_3_bewegung
+    from:
+    - 'off'
+    to:
+    - 'on'
+    id: motion_on
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.shelly1pmminig3_3030f9e67cdc
+  mode: single
+  max_exceeded: silent
+- id: '1768536374036'
+  alias: garsgr Bwm keine bewegung 3 min aus
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.hue_motion_sensor_3_bewegung
+    to:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 3
+      seconds: 0
+    id: motion off
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.shelly1pmminig3_3030f9e67cdc
+  mode: single
+  max_exceeded: silent
+- id: '1768536666289'
+  alias: OG BWM Licht ein
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.hue_motion_sensor_5_bewegung
+    from:
+    - 'off'
+    to:
+    - 'on'
+    id: motion_on
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_on
+    metadata: {}
+    data: {}
+    target:
+      entity_id: switch.shellypro4pm_6825ddd5fe40_switch_1
+  mode: single
+  max_exceeded: silent
+- id: '1768536815227'
+  alias: OG BWM keine Beweg 3 min licht aus
+  description: ''
+  triggers:
+  - entity_id:
+    - binary_sensor.hue_motion_sensor_4_bewegung
+    to:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 3
+      seconds: 0
+    id: motion_off
+    trigger: state
+  conditions: []
+  actions:
+  - action: switch.turn_off
+    metadata: {}
+    target:
+      entity_id:
+      - switch.shellypro4pm_6825ddd5fe40_switch_1
+    data: {}
+  mode: single
+  max_exceeded: silent
+- id: '1768581511593'
+  alias: Nightmodus
+  description: ''
+  triggers: []
+  conditions: []
+  actions:
+  - target:
+      entity_id:
+      - switch.shellypro4pm_6825ddd5fe40_switch_0
+      - switch.shellypro4pm_6825ddd5fe40_switch_1
+    action: switch.turn_off
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_off
+  - target:
+      entity_id:
+      - light.hue_play_1
+      - light.hue_play_2
+      - light.hue_go_1
+      - light.hue_go_2
+      - light.hue_bloom_2
+    data:
+      brightness_pct: 50
+      hs_color:
+      - 180
+      - 100
+    action: light.turn_on
+  mode: single
+- id: nightmodus_aus_0715
+  alias: Nightmodus AUS morgens
+  description: ''
+  triggers:
+  - at: 07:15:00
+    trigger: time
+  actions:
+  - target:
+      entity_id: input_boolean.nightmodus
+    action: input_boolean.turn_off
+  mode: single
+- id: nightmodus_aus_0715
+  alias: Nightmodus AUS morgens
+  description: ''
+  triggers:
+  - at: 07:15:00
+    trigger: time
+  actions:
+  - target:
+      entity_id: input_boolean.nightmodus
+    action: input_boolean.turn_off
+  mode: single
+- id: nightmodus_off_hue_melder_ein
+  alias: Nightmodus OFF -> Hue Melder OG/EG EIN
+  description: ''
+  triggers:
+  - entity_id: input_boolean.nightmodus
+    to: 'off'
+    trigger: state
+  actions:
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_on
+  mode: single
+- id: nightmodus_on_hue_melder_aus
+  alias: Nightmodus ON -> Hue Melder OG/EG AUS
+  description: ''
+  triggers:
+  - entity_id: input_boolean.nightmodus
+    to: 'on'
+    trigger: state
+  actions:
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_off
+  mode: single
+- id: nightmodus_on_actions
+  alias: Nightmodus ON – Melder AUS, Shellys AUS, Cyan AN
+  description: ''
+  triggers:
+  - entity_id: input_boolean.nightmodus
+    to: 'on'
+    trigger: state
+  actions:
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_off
+  - target:
+      entity_id:
+      - switch.SHELLY_1_HIER
+      - switch.SHELLY_2_HIER
+    action: switch.turn_off
+  - target:
+      entity_id:
+      - light.HUE_GO_HIER
+      - light.HUE_BLOOM_HIER
+    data:
+      rgb_color:
+      - 0
+      - 255
+      - 255
+      brightness_pct: 35
+    action: light.turn_on
+  mode: single
+- id: nightmodus_off_actions
+  alias: Nightmodus OFF – Cyan AUS, Melder EIN
+  description: ''
+  triggers:
+  - entity_id: input_boolean.nightmodus
+    to: 'off'
+    trigger: state
+  actions:
+  - target:
+      entity_id:
+      - light.HUE_GO_HIER
+      - light.HUE_BLOOM_HIER
+    action: light.turn_off
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_on
+  mode: single
+- id: nightmodus_auto_off_0715
+  alias: Nightmodus automatisch AUS 07:15
+  description: ''
+  triggers:
+  - at: 07:15:00
+    trigger: time
+  actions:
+  - target:
+      entity_id: input_boolean.nightmodus
+    action: input_boolean.turn_off
+  mode: single
+- id: nightmodus_on_master
+  alias: Nightmodus ON – Melder AUS, EG/OG AUS, Cyan AN, Outdoor 80% weiss
+  description: ''
+  triggers:
+  - entity_id: input_boolean.nightmodus
+    to: 'on'
+    trigger: state
+  actions:
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_off
+  - target:
+      entity_id:
+      - switch.shellypro4pm_6825ddd5fe40_switch_0
+      - switch.shellypro4pm_6825ddd5fe40_switch_1
+    action: switch.turn_off
+  - target:
+      entity_id:
+      - light.hue_bloom_2
+      - light.hue_go_1
+      - light.hue_go_2
+      - light.hue_play_1
+      - light.hue_play_2
+    data:
+      rgb_color:
+      - 0
+      - 255
+      - 255
+      brightness_pct: 35
+    action: light.turn_on
+  - target:
+      entity_id:
+      - light.hue_resonate_outdoor_wall_1
+      - light.hue_resonate_outdoor_wall_2
+    data:
+      brightness_pct: 80
+      color_temp_kelvin: 4000
+    action: light.turn_on
+  mode: single
+- id: nightmodus_off_master
+  alias: Nightmodus OFF – Cyan AUS, Outdoor AUS, Melder EIN
+  description: ''
+  triggers:
+  - entity_id: input_boolean.nightmodus
+    to: 'off'
+    trigger: state
+  actions:
+  - target:
+      entity_id:
+      - light.hue_bloom_2
+      - light.hue_go_1
+      - light.hue_go_2
+      - light.hue_play_1
+      - light.hue_play_2
+      - light.hue_resonate_outdoor_wall_1
+      - light.hue_resonate_outdoor_wall_2
+    action: light.turn_off
+  - target:
+      entity_id:
+      - switch.hue_motion_sensor_4_bewegungssensor_aktiviert
+      - switch.hue_motion_sensor_5_bewegungssensor_aktiviert
+    action: switch.turn_on
+  mode: single

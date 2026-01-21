@@ -1,0 +1,3 @@
+person:
+  icon: mdi:account-multiple
+  show_in_navbar: false
